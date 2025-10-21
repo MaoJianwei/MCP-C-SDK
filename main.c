@@ -46,7 +46,7 @@ int create_nonblocking_server_socket() {
     int flags = fcntl(sockfd, F_GETFL, 0);
     if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1) {
         LOG(ERR, "Fail to fcntl: errno %d", errno);
-        close(sockfd);
+        shutdown(sockfd, SHUT_RDWR);
         return -2;
     }
 
@@ -129,7 +129,7 @@ int epoll_loop(int server_socket_fd, int epoll_fd) {
                 int flags = fcntl(client_socket_fd, F_GETFL, 0);
                 if (fcntl(client_socket_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
                     LOG(ERR, "Fail to fcntl: errno %d", errno);
-                    close(client_socket_fd);
+                    shutdown(client_socket_fd, SHUT_RDWR);
                     continue;
                 }
 
@@ -141,7 +141,7 @@ int epoll_loop(int server_socket_fd, int epoll_fd) {
                 client_ev.data.fd = client_socket_fd;
                 if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_socket_fd, &client_ev) == -1) {
                     LOG(ERR, "Fail to epoll_ctl 1: errno %d", errno);
-                    close(client_socket_fd);
+                    shutdown(client_socket_fd, SHUT_RDWR);
                     continue;
                 }
 
@@ -151,11 +151,11 @@ int epoll_loop(int server_socket_fd, int epoll_fd) {
                 // 客户端Socket有数据可读
                 int client_socket_fd = events[i].data.fd;
                 char buf[10240];
-                ssize_t n = read(client_socket_fd, buf, sizeof(buf)-1);
+                ssize_t n = recv(client_socket_fd, buf, sizeof(buf)-1, 0);
                 if (n <= 0) {
                     // 连接关闭或错误，移除事件并关闭Socket
                     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_socket_fd, NULL);
-                    close(client_socket_fd);
+                    shutdown(client_socket_fd, SHUT_RDWR);
                 } else {
                     buf[n] = '\0';
                     LOG(INFO, "Received: %s", buf);
