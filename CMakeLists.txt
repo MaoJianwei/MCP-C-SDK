@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.30)
 project(mao_c_mcp_server C)
 
 set(CMAKE_C_STANDARD 99)
